@@ -15,6 +15,12 @@ class Ui_MainWindow(object):
         MainWindow.resize(800, 600)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+        self.start = QtWidgets.QPushButton(self.centralwidget)
+        self.start.setGeometry(QtCore.QRect(110, 260, 75, 23))
+        self.start.setObjectName("start")
+        self.stop = QtWidgets.QPushButton(self.centralwidget)
+        self.stop.setGeometry(QtCore.QRect(440, 260, 75, 23))
+        self.stop.setObjectName("stop")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
@@ -30,5 +36,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.start.setText(_translate("MainWindow", "Start"))
+        self.stop.setText(_translate("MainWindow", "Stop"))
 
 
