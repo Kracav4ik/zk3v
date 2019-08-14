@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QWidget
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 
@@ -13,6 +13,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.zk.start()
         self.treeWidget.itemClicked.connect(self.itemClicked)
         self.treeWidget.itemDoubleClicked.connect(self.itemOpen)
+        self.tabWidget.tabCloseRequested.connect(self.closeTab)
         self.zk.add_listener(self.my_listener)
         self.treeWidget.setColumnCount(1)
         for child in self.zk.get_children("/"):
@@ -38,8 +39,22 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
             self.log.appendPlainText("%s: %s\n" % (spaces + child, data))
             self.printAllChildren(newPath, self.zk.get_children(newPath), layer + 1)
 
-    def itemOpen(self):
-        pass
+    def closeTab(self, idx):
+        self.tabWidget.removeTab(idx)
+
+    def itemOpen(self, item, column):
+        tabName = item.text(0)
+        for i in range(self.tabWidget.count()):
+            if tabName == self.tabWidget.tabText(i):
+                self.tabWidget.setCurrentIndex(i)
+                return
+        innerText = QPlainTextEdit()
+        innerText.setReadOnly(True)
+        data, stat = self.zk.get(item.text(1))
+        innerText.setPlainText(data.decode("utf8"))
+        pos = self.tabWidget.addTab(innerText, tabName)
+        self.tabWidget.setCurrentIndex(pos)
+
 
     def drawAllTree(self):
         if self.zk.exists("/"):
