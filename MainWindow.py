@@ -41,22 +41,21 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
 
     def my_listener(self, state):
         if state == KazooState.LOST:
-            self.log.appendPlainText("state is LOST!")
-        # Register somewhere that the session was lost
+            # Register somewhere that the session was lost
+            self.log.setPlainText(self.log.toPlainText() + "state is LOST!\n")
         elif state == KazooState.SUSPENDED:
-            self.log.appendPlainText("state is SUSPENDED!")
-        # Handle being disconnected from Zookeeper
+            # Handle being disconnected from Zookeeper
+            self.log.setPlainText(self.log.toPlainText() + "state is SUSPENDED!\n")
         else:
-            self.log.appendPlainText("state is CONNECTED!")
-
-        # Handle being connected/reconnected to Zookeeper
+            # Handle being connected/reconnected to Zookeeper
+            self.log.setPlainText(self.log.toPlainText() + "state is CONNECTED!\n")
 
     def printAllChildren(self, curPath, children, layer):
         spaces = "  " * layer
         for child in children:
             newPath = curPath + "/" + child
             data, stat = self.zk.get(newPath)
-            self.log.appendPlainText("%s: %s" % (spaces + child, data))
+            self.log.setPlainText(self.log.toPlainText() + "%s: %s\n" % (spaces + child, data))
             self.printAllChildren(newPath, self.zk.get_children(newPath), layer + 1)
 
     def closeTab(self, idx):
@@ -81,7 +80,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
             root = self.zk.get_children("/")
             self.printAllChildren("/", root, 0)
         else:
-            self.log.appendPlainText("Really?.. How?.. Why?..")
+            self.log.setPlainText(self.log.toPlainText() + "Really?.. How?.. Why?..\n")
 
     def itemClicked(self, item, column):
         item.takeChildren()
