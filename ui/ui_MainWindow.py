@@ -90,9 +90,10 @@ class Ui_MainWindow(object):
         self.actionConnect = QtWidgets.QAction(MainWindow)
         self.actionConnect.setObjectName("actionConnect")
         self.actionDisconnect = QtWidgets.QAction(MainWindow)
+        self.actionDisconnect.setEnabled(False)
         self.actionDisconnect.setObjectName("actionDisconnect")
-        self.actionChange_server_address = QtWidgets.QAction(MainWindow)
-        self.actionChange_server_address.setObjectName("actionChange_server_address")
+        self.actionChangeServerAddress = QtWidgets.QAction(MainWindow)
+        self.actionChangeServerAddress.setObjectName("actionChangeServerAddress")
         self.menufile.addAction(self.actionCreationTransactionId)
         self.menufile.addAction(self.actionLastModifiedTransactionId)
         self.menufile.addAction(self.actionCreated)
@@ -104,7 +105,7 @@ class Ui_MainWindow(object):
         self.menufile.addAction(self.actionChildrenCount)
         self.menuConnect.addAction(self.actionConnect)
         self.menuConnect.addAction(self.actionDisconnect)
-        self.menuConnect.addAction(self.actionChange_server_address)
+        self.menuConnect.addAction(self.actionChangeServerAddress)
         self.menubar.addAction(self.menuConnect.menuAction())
         self.menubar.addAction(self.menufile.menuAction())
 
@@ -128,6 +129,6 @@ class Ui_MainWindow(object):
         self.actionChildrenCount.setText(_translate("MainWindow", "Children count"))
         self.actionConnect.setText(_translate("MainWindow", "Connect"))
         self.actionDisconnect.setText(_translate("MainWindow", "Disconnect"))
-        self.actionChange_server_address.setText(_translate("MainWindow", "Change server address"))
+        self.actionChangeServerAddress.setText(_translate("MainWindow", "Change server address"))
 
 

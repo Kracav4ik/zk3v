@@ -114,7 +114,7 @@
     </property>
     <addaction name="actionConnect"/>
     <addaction name="actionDisconnect"/>
-    <addaction name="actionChange_server_address"/>
+    <addaction name="actionChangeServerAddress"/>
    </widget>
    <addaction name="menuConnect"/>
    <addaction name="menufile"/>
@@ -171,11 +171,14 @@
    </property>
   </action>
   <action name="actionDisconnect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="actionChange_server_address">
+  <action name="actionChangeServerAddress">
    <property name="text">
     <string>Change server address</string>
    </property>
