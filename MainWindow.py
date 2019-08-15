@@ -120,6 +120,8 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.tabWidget.removeTab(idx)
 
     def itemOpen(self, item, column):
+        if not self.zk.exists(item.text(1)):
+            return
         tabName = item.text(0)
         for i in range(self.tabWidget.count()):
             if tabName == self.tabWidget.tabText(i):
