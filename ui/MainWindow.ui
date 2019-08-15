@@ -94,7 +94,10 @@
      <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menufile">
+   <widget class="QMenu" name="menuFileInfo">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="title">
      <string>Node info</string>
     </property>
@@ -117,7 +120,7 @@
     <addaction name="actionChangeServerAddress"/>
    </widget>
    <addaction name="menuConnect"/>
-   <addaction name="menufile"/>
+   <addaction name="menuFileInfo"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCreationTransactionId">

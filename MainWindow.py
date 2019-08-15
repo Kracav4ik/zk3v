@@ -17,6 +17,15 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.tabWidget.tabCloseRequested.connect(self.closeTab)
         self.actionConnect.triggered.connect(self.zkConnect)
         self.actionDisconnect.triggered.connect(self.zkDisconnect)
+        self.actionACLVersion.triggered.connect(self.aclVersion)
+        self.actionCreated.triggered.connect(self.created)
+        self.actionChildrenCount.triggered.connect(self.childrenCount)
+        self.actionDataLength.triggered.connect(self.dataLength)
+        self.actionLastModified.triggered.connect(self.lastModified)
+        self.actionLastModifiedTransactionId.triggered.connect(self.lastModifiedTransactionId)
+        self.actionOwnerSessionId.triggered.connect(self.ownerSessionId)
+        self.actionVersion.triggered.connect(self.version)
+        self.actionCreationTransactionId.triggered.connect(self.creationTransactionId)
         self.actionChangeServerAddress.triggered.connect(self.changeServerAddress)
         self.treeWidget.setColumnCount(1)
 
@@ -24,6 +33,36 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         if os.path.exists("hosts.txt"):
             with open("hosts.txt", "r") as f:
                 self.actionConnect.setEnabled(f.readline() != "")
+    def getCurrentStat(self):
+        _, stat = self.zk.get(self.treeWidget.currentItem().text(1))
+        return stat
+
+    def aclVersion(self):
+        self.log.setPlainText(self.log.toPlainText() + "ACL version: %s\n" % self.getCurrentStat().acl_version)
+
+    def created(self):
+        self.log.setPlainText(self.log.toPlainText() + "Created: %s\n" % self.getCurrentStat().created)
+
+    def childrenCount(self):
+        self.log.setPlainText(self.log.toPlainText() + "Children count: %s\n" % self.getCurrentStat().children_count)
+
+    def dataLength(self):
+        self.log.setPlainText(self.log.toPlainText() + "Data length: %s\n" % self.getCurrentStat().data_length)
+
+    def lastModified(self):
+        self.log.setPlainText(self.log.toPlainText() + "Last modified: %s\n" % self.getCurrentStat().last_modified)
+
+    def lastModifiedTransactionId(self):
+        self.log.setPlainText(self.log.toPlainText() + "Last modified transactionId: %s\n" % self.getCurrentStat().last_modified_transaction_id)
+
+    def ownerSessionId(self):
+        self.log.setPlainText(self.log.toPlainText() + "Owner sessionId: %s\n" % self.getCurrentStat().owner_session_id)
+
+    def version(self):
+        self.log.setPlainText(self.log.toPlainText() + "Version: %s\n" % self.getCurrentStat().version)
+
+    def creationTransactionId(self):
+        self.log.setPlainText(self.log.toPlainText() + "Creation transactionId: %s\n" % self.getCurrentStat().creation_transaction_id)
 
     def changeServerAddress(self):
         text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port")
@@ -38,6 +77,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.zk.stop()
         self.zk.close()
         self.actionDisconnect.setEnabled(False)
+        self.menuFileInfo.setEnabled(False)
         self.actionConnect.setEnabled(True)
         self.actionChangeServerAddress.setEnabled(True)
 
@@ -48,6 +88,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.zk.add_listener(self.my_listener)
         self.zk.start()
         self.init()
+        self.menuFileInfo.setEnabled(True)
         self.actionDisconnect.setEnabled(True)
         self.actionConnect.setEnabled(False)
         self.actionChangeServerAddress.setEnabled(False)
