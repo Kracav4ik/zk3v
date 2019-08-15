@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QWidget
+import os
+
+from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 
@@ -15,7 +17,20 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.tabWidget.tabCloseRequested.connect(self.closeTab)
         self.actionConnect.triggered.connect(self.zkConnect)
         self.actionDisconnect.triggered.connect(self.zkDisconnect)
+        self.actionChangeServerAddress.triggered.connect(self.changeServerAddress)
         self.treeWidget.setColumnCount(1)
+
+        self.actionConnect.setEnabled(False)
+        if os.path.exists("hosts.txt"):
+            with open("hosts.txt", "r") as f:
+                self.actionConnect.setEnabled(f.readline() != "")
+
+    def changeServerAddress(self):
+        text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port")
+        if ok:
+            with open("hosts.txt", "w") as f:
+                f.write(text)
+            self.actionConnect.setEnabled(text != "")
 
     def zkDisconnect(self):
         self.tabWidget.clear()
@@ -27,9 +42,11 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionChangeServerAddress.setEnabled(True)
 
     def zkConnect(self):
-        self.zk = KazooClient(hosts='127.0.0.1:2181')
-        self.zk.start()
+        with open("hosts.txt", "r") as f:
+            hosts = "".join(f.readlines())
+            self.zk = KazooClient(hosts=hosts)
         self.zk.add_listener(self.my_listener)
+        self.zk.start()
         self.init()
         self.actionDisconnect.setEnabled(True)
         self.actionConnect.setEnabled(False)
