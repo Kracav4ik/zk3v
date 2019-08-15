@@ -30,8 +30,8 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.treeWidget.setColumnCount(1)
 
         self.actionConnect.setEnabled(False)
-        if os.path.exists("hosts.txt"):
-            with open("hosts.txt", "r") as f:
+        if os.path.exists("config.txt"):
+            with open("config.txt", "r") as f:
                 self.actionConnect.setEnabled(f.readline() != "")
     def getCurrentStat(self):
         _, stat = self.zk.get(self.treeWidget.currentItem().text(1))
@@ -67,7 +67,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     def changeServerAddress(self):
         text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port")
         if ok:
-            with open("hosts.txt", "w") as f:
+            with open("config.txt", "w") as f:
                 f.write(text)
             self.actionConnect.setEnabled(text != "")
 
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionChangeServerAddress.setEnabled(True)
 
     def zkConnect(self):
-        with open("hosts.txt", "r") as f:
+        with open("config.txt", "r") as f:
             hosts = "".join(f.readlines())
             self.zk = KazooClient(hosts=hosts)
         self.zk.add_listener(self.my_listener)
