@@ -1,8 +1,11 @@
 import os
+import sys
 
+from PyQt5.QtGui import QTextCursor
 from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
+import logging
 
 import ui.ui_MainWindow as ui_MainWindow
 
@@ -31,6 +34,19 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionChangeServerAddress.triggered.connect(self.changeServerAddress)
         self.msgBox.buttonClicked.connect(self.msgBox.hide)
         self.msgBox.buttonClicked.connect(self.zkDisconnect)
+
+        class PlainTextWidgetHandler:
+            def __init__(self, plainTextWidget):
+                self.plainTextWidget = plainTextWidget
+                self.plainTextWidget.setCenterOnScroll(True)
+
+            def write(self, text):
+                self.plainTextWidget.textCursor().insertText(text)
+                self.plainTextWidget.ensureCursorVisible()
+
+            def flush(self):
+                pass
+        logging.basicConfig(format='%(asctime)s.%(msecs)d: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG, handlers=[logging.StreamHandler(PlainTextWidgetHandler(self.log)), logging.StreamHandler(sys.stderr)])
 
         self.treeWidget.setColumnCount(1)
         self.currentHost = ""
@@ -127,7 +143,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
             self.print("state is CONNECTED!")
 
     def print(self, text):
-        self.log.setPlainText(self.log.toPlainText() + text + "\n")
+        logging.info(text)
 
     def printAllChildren(self, curPath, children, layer):
         spaces = "  " * layer
