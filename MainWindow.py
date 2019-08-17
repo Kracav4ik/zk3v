@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog
+from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 
@@ -11,10 +11,12 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.zk = None
+        self.zk = KazooClient()
+        self.msgBox = QMessageBox(QMessageBox.NoIcon, "Connection", "Connecting...", QMessageBox.Cancel, self)
         self.treeWidget.itemClicked.connect(self.itemClicked)
         self.treeWidget.itemDoubleClicked.connect(self.itemOpen)
         self.tabWidget.tabCloseRequested.connect(self.closeTab)
+        self.actionConnect.triggered.connect(self.msgBox.show)
         self.actionConnect.triggered.connect(self.zkConnect)
         self.actionDisconnect.triggered.connect(self.zkDisconnect)
         self.actionACLVersion.triggered.connect(self.aclVersion)
@@ -27,49 +29,66 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionVersion.triggered.connect(self.version)
         self.actionCreationTransactionId.triggered.connect(self.creationTransactionId)
         self.actionChangeServerAddress.triggered.connect(self.changeServerAddress)
+        self.msgBox.buttonClicked.connect(self.msgBox.hide)
+        self.msgBox.buttonClicked.connect(self.zkDisconnect)
+
         self.treeWidget.setColumnCount(1)
+        self.currentHost = ""
+
+        l = self.msgBox.layout()
+        progress = QProgressBar()
+        progress.setMaximum(0)
+        progress.setMinimum(0)
+        l.addWidget(progress, l.rowCount() - 2, 1, 1, l.columnCount())
 
         self.actionConnect.setEnabled(False)
         if os.path.exists("config.txt"):
             with open("config.txt", "r") as f:
-                self.actionConnect.setEnabled(f.readline() != "")
+                self.currentHost = f.readline().strip()
+                if self.currentHost != "":
+                    self.print("Current host is: %s" % self.currentHost)
+                    self.actionConnect.setEnabled(True)
+
     def getCurrentStat(self):
         _, stat = self.zk.get(self.treeWidget.currentItem().text(1))
         return stat
 
     def aclVersion(self):
-        self.log.setPlainText(self.log.toPlainText() + "ACL version: %s\n" % self.getCurrentStat().acl_version)
+        self.print("ACL version: %s" % self.getCurrentStat().acl_version)
 
     def created(self):
-        self.log.setPlainText(self.log.toPlainText() + "Created: %s\n" % self.getCurrentStat().created)
+        self.print("Created: %s" % self.getCurrentStat().created)
 
     def childrenCount(self):
-        self.log.setPlainText(self.log.toPlainText() + "Children count: %s\n" % self.getCurrentStat().children_count)
+        self.print("Children count: %s" % self.getCurrentStat().children_count)
 
     def dataLength(self):
-        self.log.setPlainText(self.log.toPlainText() + "Data length: %s\n" % self.getCurrentStat().data_length)
+        self.print("Data length: %s" % self.getCurrentStat().data_length)
 
     def lastModified(self):
-        self.log.setPlainText(self.log.toPlainText() + "Last modified: %s\n" % self.getCurrentStat().last_modified)
+        self.print("Last modified: %s" % self.getCurrentStat().last_modified)
 
     def lastModifiedTransactionId(self):
-        self.log.setPlainText(self.log.toPlainText() + "Last modified transactionId: %s\n" % self.getCurrentStat().last_modified_transaction_id)
+        self.print("Last modified transactionId: %s" % self.getCurrentStat().last_modified_transaction_id)
 
     def ownerSessionId(self):
-        self.log.setPlainText(self.log.toPlainText() + "Owner sessionId: %s\n" % self.getCurrentStat().owner_session_id)
+        self.print("Owner sessionId: %s" % self.getCurrentStat().owner_session_id)
 
     def version(self):
-        self.log.setPlainText(self.log.toPlainText() + "Version: %s\n" % self.getCurrentStat().version)
+        self.print("Version: %s" % self.getCurrentStat().version)
 
     def creationTransactionId(self):
-        self.log.setPlainText(self.log.toPlainText() + "Creation transactionId: %s\n" % self.getCurrentStat().creation_transaction_id)
+        self.print("Creation transactionId: %s" % self.getCurrentStat().creation_transaction_id)
 
     def changeServerAddress(self):
-        text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port")
+        text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port", text=self.currentHost)
         if ok:
             with open("config.txt", "w") as f:
                 f.write(text)
-            self.actionConnect.setEnabled(text != "")
+            self.currentHost = text.strip()
+            if self.currentHost != "":
+                self.print("Current host changed to %s" % self.currentHost)
+                self.actionConnect.setEnabled(True)
 
     def zkDisconnect(self):
         self.tabWidget.clear()
@@ -82,11 +101,10 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionChangeServerAddress.setEnabled(True)
 
     def zkConnect(self):
-        with open("config.txt", "r") as f:
-            hosts = "".join(f.readlines())
-            self.zk = KazooClient(hosts=hosts)
+        self.zk.set_hosts(self.currentHost)
         self.zk.add_listener(self.my_listener)
         self.zk.start()
+        self.msgBox.hide()
         self.init()
         self.menuFileInfo.setEnabled(True)
         self.actionDisconnect.setEnabled(True)
@@ -100,20 +118,23 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     def my_listener(self, state):
         if state == KazooState.LOST:
             # Register somewhere that the session was lost
-            self.log.setPlainText(self.log.toPlainText() + "state is LOST!\n")
+            self.print("state is LOST!")
         elif state == KazooState.SUSPENDED:
             # Handle being disconnected from Zookeeper
-            self.log.setPlainText(self.log.toPlainText() + "state is SUSPENDED!\n")
+            self.print("state is SUSPENDED!")
         else:
             # Handle being connected/reconnected to Zookeeper
-            self.log.setPlainText(self.log.toPlainText() + "state is CONNECTED!\n")
+            self.print("state is CONNECTED!")
+
+    def print(self, text):
+        self.log.setPlainText(self.log.toPlainText() + text + "\n")
 
     def printAllChildren(self, curPath, children, layer):
         spaces = "  " * layer
         for child in children:
             newPath = curPath + "/" + child
             data, stat = self.zk.get(newPath)
-            self.log.setPlainText(self.log.toPlainText() + "%s: %s\n" % (spaces + child, data))
+            self.print("%s: %s" % (spaces + child, data))
             self.printAllChildren(newPath, self.zk.get_children(newPath), layer + 1)
 
     def closeTab(self, idx):
@@ -140,7 +161,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
             root = self.zk.get_children("/")
             self.printAllChildren("/", root, 0)
         else:
-            self.log.setPlainText(self.log.toPlainText() + "Really?.. How?.. Why?..\n")
+            self.print("Really?.. How?.. Why?..")
 
     def itemClicked(self, item, column):
         item.takeChildren()
