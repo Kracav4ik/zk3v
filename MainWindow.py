@@ -161,8 +161,12 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     def zkConnect(self):
         self.zk.set_hosts(self.currentHost)
         self.zk.add_listener(self.my_listener)
-        self.zk.start()
-        self.msgBox.hide()
+        try:
+            self.zk.start()
+        except Exception as e:
+            logging.exception("error: {0}".format(e))
+        finally:
+            self.msgBox.hide()
         self.init()
         self.menuFileInfo.setEnabled(True)
         self.actionDisconnect.setEnabled(True)
