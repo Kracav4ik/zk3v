@@ -1,10 +1,10 @@
 import functools
-import traceback
+import threading
 import logging
 import os
 import sys
 
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QTimer
 
 from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar
 from kazoo.client import KazooClient
@@ -24,17 +24,24 @@ def catchExept(func):
 
 
 class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
+    mainWriteGui = pyqtSignal(str)
+
     @catchExept
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.zk = KazooClient()
+        self.zkTimer = QTimer(self)
+        self.zkTimer.setInterval(100)
+        self.zkTimer.timeout.connect(self.zkTimeout)
+        self.zkStartThread = threading.Thread(target=self.zkConnect)
         self.msgBox = QMessageBox(QMessageBox.NoIcon, "Connection", "Connecting...", QMessageBox.Cancel, self)
         self.treeWidget.itemClicked.connect(self.itemClicked)
         self.treeWidget.itemDoubleClicked.connect(self.itemOpen)
         self.tabWidget.tabCloseRequested.connect(self.closeTab)
         self.actionConnect.triggered.connect(self.msgBox.show)
-        self.actionConnect.triggered.connect(self.zkConnect)
+        self.actionConnect.triggered.connect(self.zkStartThread.start)
+        self.actionConnect.triggered.connect(self.zkTimer.start)
         self.actionDisconnect.triggered.connect(self.zkDisconnect)
         self.actionACLVersion.triggered.connect(self.aclVersion)
         self.actionCreated.triggered.connect(self.created)
@@ -46,23 +53,24 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionVersion.triggered.connect(self.version)
         self.actionCreationTransactionId.triggered.connect(self.creationTransactionId)
         self.actionChangeServerAddress.triggered.connect(self.changeServerAddress)
-        self.msgBox.buttonClicked.connect(self.msgBox.hide)
-        self.msgBox.buttonClicked.connect(self.zkDisconnect)
+        self.msgBox.rejected.connect(self.zkTimer.stop)
+        self.msgBox.rejected.connect(self.msgBox.hide)
+        self.msgBox.rejected.connect(self.zkDisconnect)
+        self.mainWriteGui.connect(self.slotMainWriteGui)
+        self.log.setCenterOnScroll(True)
 
         class PlainTextWidgetHandler:
-            def __init__(self, plainTextWidget):
-                self.plainTextWidget = plainTextWidget
-                self.plainTextWidget.setCenterOnScroll(True)
+            def __init__(self, logToWriteGui):
+                self.logToWriteGui = logToWriteGui
 
             def write(self, text):
-                self.plainTextWidget.ensureCursorVisible()
-                self.plainTextWidget.textCursor().insertText(text)
+                self.logToWriteGui(text)
 
             def flush(self):
                 pass
 
         logging.basicConfig(format='%(asctime)s.%(msecs)d: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG,
-                            handlers=[logging.StreamHandler(PlainTextWidgetHandler(self.log)),
+                            handlers=[logging.StreamHandler(PlainTextWidgetHandler(self.logToWriteGui)),
                                       logging.StreamHandler(sys.stderr)])
 
         self.treeWidget.setColumnCount(1)
@@ -81,6 +89,15 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
                 if self.currentHost != "":
                     self.print("Current host is: %s" % self.currentHost)
                     self.actionConnect.setEnabled(True)
+
+    @pyqtSlot(str)
+    def slotMainWriteGui(self, text):
+        self.log.ensureCursorVisible()
+        self.log.textCursor().insertText(text)
+
+    def logToWriteGui(self, text):
+        self.mainWriteGui.emit(text)
+
     @catchExept
     def getCurrentStat(self):
         _, stat = self.zk.get(self.treeWidget.currentItem().text(1))
@@ -155,23 +172,33 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.menuFileInfo.setEnabled(False)
         self.actionConnect.setEnabled(True)
         self.actionChangeServerAddress.setEnabled(True)
+        self.zkStartThread = threading.Thread(target=self.zkConnect)
+        self.actionConnect.triggered.connect(self.zkStartThread.start)
 
     @catchExept
     @pyqtSlot()
-    def zkConnect(self):
-        self.zk.set_hosts(self.currentHost)
-        self.zk.add_listener(self.my_listener)
-        try:
-            self.zk.start()
-        except Exception as e:
-            logging.exception("error: {0}".format(e))
-        finally:
-            self.msgBox.hide()
+    def zkTimeout(self):
+        if self.zk.connected:
+            self.zkConnected()
+            self.zkTimer.stop()
+
+    @catchExept
+    def zkConnected(self):
+        self.msgBox.hide()
         self.init()
         self.menuFileInfo.setEnabled(True)
         self.actionDisconnect.setEnabled(True)
         self.actionConnect.setEnabled(False)
         self.actionChangeServerAddress.setEnabled(False)
+
+    @catchExept
+    def zkConnect(self):
+        self.zk.set_hosts(self.currentHost)
+        self.zk.add_listener(self.my_listener)
+        try:
+            self.zk.start_async()
+        except Exception as e:
+            logging.exception("error: {0}".format(e))
 
     @catchExept
     def init(self):
