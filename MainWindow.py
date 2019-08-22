@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QTimer
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QTimer, Qt
 
 from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar
 from kazoo.client import KazooClient
@@ -74,6 +74,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
                                       logging.StreamHandler(sys.stderr)])
 
         self.treeWidget.setColumnCount(1)
+        self.treeWidget.sortByColumn(0, Qt.AscendingOrder)
         self.currentHost = ""
 
         l = self.msgBox.layout()

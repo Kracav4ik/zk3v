@@ -120,6 +120,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.treeWidget.setSortingEnabled(True)
         self.menuFileInfo.setTitle(_translate("MainWindow", "Node info"))
         self.menuConnect.setTitle(_translate("MainWindow", "Connection"))
         self.actionCreationTransactionId.setText(_translate("MainWindow", "Creation transaction id"))
