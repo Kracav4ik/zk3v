@@ -18,6 +18,9 @@ def catchExept(func):
     def wrap(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except KeyboardInterrupt as e:
+            logging.exception("ctrl+c pressed: {0}".format(e))
+            raise e
         except Exception as e:
             logging.exception("error: {0}".format(e))
     return wrap
