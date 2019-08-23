@@ -17,7 +17,7 @@ def catchExept(func):
     @functools.wraps(func)
     def wrap(*args, **kwargs):
         try:
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
         except Exception as e:
             logging.exception("error: {0}".format(e))
     return wrap
@@ -204,7 +204,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     @catchExept
     def init(self):
         for child in self.zk.get_children("/"):
-            self.treeWidget.addTopLevelItem(QTreeWidgetItem([child, "/" + child]))
+            self.treeWidget.addTopLevelItem(QTreeWidgetItem([child, "/" + child, child]))
 
     @catchExept
     def my_listener(self, state):
@@ -241,7 +241,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     def itemOpen(self, item, column):
         if not self.zk.exists(item.text(1)):
             return
-        tabName = item.text(0)
+        tabName = item.text(2)
         for i in range(self.tabWidget.count()):
             if tabName == self.tabWidget.tabText(i):
                 self.tabWidget.setCurrentIndex(i)
@@ -265,7 +265,15 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     @catchExept
     @pyqtSlot(QTreeWidgetItem, int)
     def itemClicked(self, item, column):
-        item.takeChildren()
+        item.setText(0, item.text(2) + " (%s)" % self.getCurrentStat().children_count)
+        children = item.takeChildren()
+        newChildren = []
         if self.zk.exists(item.text(1)):
             for child in self.zk.get_children(item.text(1)):
-                item.addChild(QTreeWidgetItem([child, item.text(1) + "/" + child]))
+                for oldChild in children:
+                    if oldChild.text(2) == child:
+                        newChildren.append(oldChild)
+                        break
+                else:
+                    newChildren.append(QTreeWidgetItem([child, item.text(1) + "/" + child, child]))
+        item.addChildren(newChildren)
