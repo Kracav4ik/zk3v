@@ -6,11 +6,12 @@ import sys
 
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QTimer, Qt
 
-from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar
+from PyQt5.QtWidgets import QMainWindow, QTreeWidgetItem, QPlainTextEdit, QInputDialog, QMessageBox, QProgressBar, QDialog
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 
 import ui.ui_MainWindow as ui_MainWindow
+import ui.ui_Dialog as ui_Dialog
 
 
 def catchExept(func):
@@ -25,6 +26,12 @@ def catchExept(func):
             logging.exception("error: {0}".format(e))
     return wrap
 
+
+class SelectorDialog(QDialog, ui_Dialog.Ui_Dialog):
+    @catchExept
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setupUi(self)
 
 class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     mainWriteGui = pyqtSignal(str)
@@ -61,6 +68,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.msgBox.rejected.connect(self.zkDisconnect)
         self.mainWriteGui.connect(self.slotMainWriteGui)
         self.log.setCenterOnScroll(True)
+        self.dialog = SelectorDialog(self)
 
         class PlainTextWidgetHandler:
             def __init__(self, logToWriteGui):
@@ -78,7 +86,6 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
 
         self.treeWidget.setColumnCount(1)
         self.treeWidget.sortByColumn(0, Qt.AscendingOrder)
-        self.currentHost = ""
 
         l = self.msgBox.layout()
         progress = QProgressBar()
@@ -89,10 +96,14 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
         self.actionConnect.setEnabled(False)
         if os.path.exists("config.txt"):
             with open("config.txt", "r") as f:
-                self.currentHost = f.readline().strip()
-                if self.currentHost != "":
-                    self.print("Current host is: %s" % self.currentHost)
-                    self.actionConnect.setEnabled(True)
+                prelines = [string.strip() for string in f.readlines()]
+                lines = [prelines[0]]
+                for i in range(1, len(prelines)):
+                    if prelines[i-1] != prelines[i] and prelines[i] not in lines:
+                        lines.append(prelines[i])
+                lines = list(filter(None, lines))
+                self.dialog.comboBox.addItems(lines)
+
 
     @pyqtSlot(str)
     def slotMainWriteGui(self, text):
@@ -155,14 +166,20 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
     @catchExept
     @pyqtSlot()
     def changeServerAddress(self):
-        text, ok = QInputDialog.getText(self, "Change server address", "Type your address and port",
-                                        text=self.currentHost)
-        if ok:
+        code = self.dialog.exec_()
+        if code == QDialog.Accepted:
+            text = self.currentHost()
             with open("config.txt", "w") as f:
-                f.write(text)
-            self.currentHost = text.strip()
-            if self.currentHost != "":
-                self.print("Current host changed to %s" % self.currentHost)
+                hosts = [self.dialog.comboBox.itemText(s) for s in range(self.dialog.comboBox.count()) if text != self.dialog.comboBox.itemText(s)]
+                self.dialog.comboBox.clear()
+                self.dialog.comboBox.addItems(hosts)
+                hosts.insert(0, text)
+                f.write('\n'.join(hosts))
+            if text != "":
+                if text != self.dialog.comboBox.itemText(0):
+                    self.dialog.comboBox.insertItem(0, text)
+                    self.dialog.comboBox.setCurrentText(text)
+                self.print("Current host changed to %s" % self.currentHost())
                 self.actionConnect.setEnabled(True)
 
     @catchExept
@@ -197,12 +214,15 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
 
     @catchExept
     def zkConnect(self):
-        self.zk.set_hosts(self.currentHost)
+        self.zk.set_hosts(self.currentHost())
         self.zk.add_listener(self.my_listener)
         try:
             self.zk.start_async()
         except Exception as e:
             logging.exception("error: {0}".format(e))
+
+    def currentHost(self):
+        return self.dialog.comboBox.currentText()
 
     @catchExept
     def init(self):
