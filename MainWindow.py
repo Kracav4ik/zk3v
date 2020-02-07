@@ -103,7 +103,7 @@ class MainWindow(QMainWindow, ui_MainWindow.Ui_MainWindow):
                         lines.append(prelines[i])
                 lines = list(filter(None, lines))
                 self.dialog.comboBox.addItems(lines)
-
+                self.actionConnect.setEnabled(True)
 
     @pyqtSlot(str)
     def slotMainWriteGui(self, text):
